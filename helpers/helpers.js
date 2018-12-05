@@ -4,6 +4,23 @@ const base62 = require("base62");
 const md5 = require("md5");
 const request = require("request");
 const cheerio = require("cheerio");
+const webpush = require("web-push");
+const helpers = require("../helpers/helpers");
+
+const vapidKeys = webpush.generateVAPIDKeys();
+
+const publicVapidKey =
+  "BCd-NNalv04tT2HKYxWcv4nqEd2jUeW173il04IjQXRu_H6XTQ_7tz9ovPDfAandOeVHj6hyeZqqQBSooqtlJoo";
+const privateVapidKey = "HqOgaDcK79ljBAXMgG2v-K5kuE57zV9AoKWohjYu9iM";
+
+console.log("publicVapidKey", publicVapidKey, privateVapidKey);
+// Replace with your email
+webpush.setVapidDetails(
+  "mailto:trinhducbaolinh@gmail.com",
+  publicVapidKey,
+  privateVapidKey
+);
+
 exports.connectDb = () => {
   mongoose.connect(
     process.env.DB_URL,
@@ -75,6 +92,18 @@ exports.getTitleWebSite = url => {
     }
   });
 };
+
+exports.subscriptionNotify = sub => {
+  console.log("subscription", sub);
+  subscription = sub;
+};
+exports.pushNotify = (subscription, data) => {
+  
+  const payload = JSON.stringify({ data });
+  webpush.sendNotification(subscription, payload).catch(error => {
+    console.error(error.stack);
+  });
+};
 exports.base_encode = num => {
   return base62.encode(num);
 };
@@ -103,4 +132,16 @@ exports.getHost = () => {
 
 exports.getMaxShortLen = () => {
   return process.env.SHORT_LINK_LENGTH;
+};
+
+exports.setSession = app => {
+  const session = require("express-session");
+  const MongoStore = require("connect-mongo")(session);
+
+  app.use(
+    session({
+      secret: "foo",
+      store: new MongoStore(options)
+    })
+  );
 };

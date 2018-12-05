@@ -4,7 +4,10 @@ const linkRepo = require("../repositories/link-repo");
 const AcessLink = require("../repositories/access-histories");
 const AcessLinkModel = require("../models/access-histories");
 const accessLinkController = require("./accessLink-controller");
+const notificationController = require("./notification-controller");
+
 const LinkModel = require("../models/links");
+const SubModel = require("../models/subs");
 
 exports.generateShortLink = async (req, res) => {
   const { token, link } = req.body;
@@ -19,29 +22,11 @@ exports.generateShortLink = async (req, res) => {
   linkPromise
     .then(async linkObj => {
       if (linkObj) {
-        //   let accessLink = await AcessLinkModel.update(
-        //     { link_id: linkObj.id },
-        //     { link_id: linkObj.id },
-        //     { upsert: true }
-        //   );
-        console.log("linkdad", linkObj._id);
-        await accessLinkController.updateorCreate(linkObj._id);
-        let dataAcessLink = await AcessLinkModel.findOne({
-          link_id: linkObj._id
-        });
-        if (dataAcessLink) {
-          dataAcessLink = JSON.parse(JSON.stringify(dataAcessLink));
-          linkObj = JSON.parse(JSON.stringify(linkObj));
-          console.log("dataAcessLink", dataAcessLink, linkObj);
-          dataAcessLink.full_link = linkObj.full_link;
-          dataAcessLink.short_link = linkObj.short_link;
-          dataAcessLink.title_link = linkObj.title_link;
-
-          return helpers.sendResponseSuccess(res, dataAcessLink);
-        }
+        return helpers.sendResponseSuccess(res, linkObj);
+        // }
       } else {
         const genShortLink = generateShortLink();
-        const shortLink = helpers.getHost() + genShortLink;
+        const shortLink = genShortLink;
         const fullLink = link.trim();
         const titleLink = await helpers.getTitleWebSite(fullLink);
         return linkRepo.addLink(shortLink, fullLink, titleLink);
@@ -49,27 +34,7 @@ exports.generateShortLink = async (req, res) => {
     })
     .then(async storedLink => {
       if (storedLink) {
-        //   AcessLink.insert({ link_id: storedLink.id }, function(err, doc) {
-        //     if (err) {
-        //     }
-        //   });
-        // let accessLink = await AcessLinkModel.update(
-        //   { link_id: storedLink.id },
-        //   { link_id: storedLink.id },
-        //   { upsert: true }
-        // );
-        await accessLinkController.updateorCreate(storedLink._id);
-        let dataAcessLink = await AcessLinkModel.findOne({
-          link_id: storedLink._id
-        });
-        if (dataAcessLink) {
-          dataAcessLink = JSON.parse(JSON.stringify(dataAcessLink));
-          storedLink = JSON.parse(JSON.stringify(storedLink));
-          dataAcessLink.full_link = storedLink.full_link;
-          dataAcessLink.short_link = storedLink.short_link;
-          dataAcessLink.title_link = storedLink.title_link;
-          return helpers.sendResponseSuccess(res, dataAcessLink);
-        }
+        return helpers.sendResponseSuccess(res, storedLink);
       }
 
       return helpers.sendResponseError(res, "");
@@ -78,28 +43,40 @@ exports.generateShortLink = async (req, res) => {
       console.log("generateShortLink err", err);
       return helpers.sendResponse(res, err.toString());
     });
-  // }
-  //  try {
-  //     link = link?link.trim():''
-  //     if(link){
-  //         let dataLink = await LinkModel.findOne({link});
-  //         if(dataLink){
-  //            await accessLinkController.updateorCreate(storedLink.id);
-
-  //         }
-  //         else{
-  //             let newDataLink = await linkRepo.addLink(shortLink, fullLink);
-  //             if(newDataLink){
-
-  //             }
-  //         }
-  //     }
-
-  //  } catch (error) {
-
-  //  }
 };
+exports.getFullLink = async (req, res) => {
+  try {
+    let { short_link } = req.params;
+    short_link = short_link ? short_link.trim() : "";
 
+    let link = await LinkModel.findOne({ short_link });
+    console.log("link", link, link.full_link);
+    if (link) {
+      await LinkModel.update(
+        { short_link },
+        { count: link.count + 1, last_visited_at: Date.now() }
+      );
+      return helpers.sendResponseSuccess(res, link.full_link);
+    } else {
+      return helpers.sendResponse(res, "Link is not found");
+    }
+  } catch (error) {
+    return helpers.sendResponse(res, error.toString());
+  }
+};
+exports.getTopLink = (req, res) => {
+  LinkModel.find({})
+    .sort({ count: -1 })
+    .limit(10)
+    .exec(async (err, list) => {
+      if (err) {
+        // resData = JSON.parse(JSON.stringify(constants.response.error));
+        // resData.message = err.toString();
+        return helpers.sendResponseError(res, err.toString());
+      }
+      return helpers.sendResponseSuccess(res, list);
+    });
+};
 function generateShortLink() {
   const now = Date.now();
   let result = helpers.base_encode(now);
