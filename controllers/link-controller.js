@@ -35,6 +35,7 @@ exports.generateShortLink = async (req, res) => {
           console.log("dataAcessLink", dataAcessLink, linkObj);
           dataAcessLink.full_link = linkObj.full_link;
           dataAcessLink.short_link = linkObj.short_link;
+          dataAcessLink.title_link = linkObj.title_link;
 
           return helpers.sendResponseSuccess(res, dataAcessLink);
         }
@@ -42,7 +43,8 @@ exports.generateShortLink = async (req, res) => {
         const genShortLink = generateShortLink();
         const shortLink = helpers.getHost() + genShortLink;
         const fullLink = link.trim();
-        return linkRepo.addLink(shortLink, fullLink);
+        const titleLink = await helpers.getTitleWebSite(fullLink);
+        return linkRepo.addLink(shortLink, fullLink, titleLink);
       }
     })
     .then(async storedLink => {
@@ -62,9 +64,10 @@ exports.generateShortLink = async (req, res) => {
         });
         if (dataAcessLink) {
           dataAcessLink = JSON.parse(JSON.stringify(dataAcessLink));
-          dataAcessLink.fullLink = storedLink.fullLink;
-          dataAcessLink.shortLink = storedLink.shortLink;
-
+          storedLink = JSON.parse(JSON.stringify(storedLink));
+          dataAcessLink.full_link = storedLink.full_link;
+          dataAcessLink.short_link = storedLink.short_link;
+          dataAcessLink.title_link = storedLink.title_link;
           return helpers.sendResponseSuccess(res, dataAcessLink);
         }
       }

@@ -23,7 +23,7 @@ module.exports = {
             //   .project({'short_link':true,'full_link':true})
             var listLink = await LinkModel.find(
               { _id: listId },
-              { short_link: true, full_link: true }
+              { short_link: true, full_link: true, title_link: true }
             );
             if (listLink && listLink.length > 0) {
               result = listLink.map((link, index) => {
@@ -46,21 +46,20 @@ module.exports = {
   updateorCreate: async function(link_id) {
     try {
       console.log("link_id", link_id);
-      if(link_id){
+      if (link_id) {
         var accessLink = await AcessLinkModel.findOne({ link_id });
         if (accessLink) {
-            return AcessLinkModel.updateOne(
-            { 'link_id':link_id },
+          return AcessLinkModel.updateOne(
+            { link_id: link_id },
             { count: accessLink.count + 1, last_visted_at: Date.now() }
-            );
+          );
         } else {
-            var accessModel = new AcessLinkModel({ link_id });
-            return accessModel.save();
+          var accessModel = new AcessLinkModel({ link_id });
+          return accessModel.save();
         }
-    }
-     else{
-         return null
-     }
+      } else {
+        return null;
+      }
     } catch (error) {
       console.log("error", error);
       return null;

@@ -2,7 +2,8 @@ const mongoose = require("mongoose");
 const constants = require("../constants/constants");
 const base62 = require("base62");
 const md5 = require("md5");
-
+const request = require("request");
+const cheerio = require("cheerio");
 exports.connectDb = () => {
   mongoose.connect(
     process.env.DB_URL,
@@ -57,7 +58,23 @@ exports.isValidToken = token => {
   // todo ... need more logic to check token is valid or not
   return true;
 };
-
+exports.getTitleWebSite = url => {
+  return new Promise((resolve, reject) => {
+    try {
+      request(url, function(error, response, body) {
+        if (!error && response.statusCode == 200) {
+          var $ = cheerio.load(body);
+          var title = $("title").text();
+          console.log("title web", title);
+          resolve(title);
+        }
+        resolve("");
+      });
+    } catch (error) {
+      resolve("");
+    }
+  });
+};
 exports.base_encode = num => {
   return base62.encode(num);
 };
