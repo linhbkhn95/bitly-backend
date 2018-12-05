@@ -1,67 +1,108 @@
-const helpers = require('../helpers/helpers');
-const constants = require('../constants/constants');
-const linkRepo = require('../repositories/link-repo');
+const helpers = require("../helpers/helpers");
+const constants = require("../constants/constants");
+const linkRepo = require("../repositories/link-repo");
+const AcessLink = require("../repositories/access-histories");
+const AcessLinkModel = require("../models/access-histories");
+const accessLinkController = require("./accessLink-controller");
+const LinkModel = require("../models/links");
 
-exports.generateShortLink = (req, res) => {
+exports.generateShortLink = async (req, res) => {
   const { token, link } = req.body;
-  if (!helpers.isValidToken(token)) {
-      helpers.sendResponse(res, constants.response.unValidToken);
-  } else if (!helpers.isValidUrl(link)) {
-      helpers.sendResponse(res, constants.response.unValidLink);
-  } else {
-      let resData = null;
-      const linkPromise = linkRepo.findLinkByFull(link);
+  //   if (!helpers.isValidToken(token)) {
+  //     helpers.sendResponse(res, constants.response.unValidToken);
+  //   } else if (!helpers.isValidUrl(link)) {
+  //     helpers.sendResponse(res, constants.response.unValidLink);
+  //   } else {
+  let resData = null;
+  const linkPromise = linkRepo.findLinkByFull(link);
 
-      linkPromise.then((linkObj) => {
-          if (linkObj) {
-              resData = {
-                  code: constants.response.ok.code,
-                  message: constants.response.ok.message,
-                  data: {
-                      short_link: linkObj.short_link,
-                      full_link: linkObj.full_link,
-                  }
-              };
-          } else {
-              const genShortLink = generateShortLink();
-              const shortLink = helpers.getHost() + genShortLink;
-              const fullLink = link.trim();
-              return linkRepo.addLink(shortLink, fullLink);
-          }
-      }).then((storedLink) => {
-          if (storedLink) {
-              resData = {
-                  code: constants.response.ok.code,
-                  message: constants.response.ok.message,
-                  data: {
-                      short_link: storedLink.short_link,
-                      full_link: storedLink.full_link,
-                  }
-              };
-          }
+  linkPromise
+    .then(async linkObj => {
+      if (linkObj) {
+        //   let accessLink = await AcessLinkModel.update(
+        //     { link_id: linkObj.id },
+        //     { link_id: linkObj.id },
+        //     { upsert: true }
+        //   );
+        console.log("linkdad", linkObj._id);
+        await accessLinkController.updateorCreate(linkObj._id);
+        let dataAcessLink = await AcessLinkModel.findOne({
+          link_id: linkObj._id
+        });
+        if (dataAcessLink) {
+          dataAcessLink = JSON.parse(JSON.stringify(dataAcessLink));
+          linkObj = JSON.parse(JSON.stringify(linkObj));
+          console.log("dataAcessLink", dataAcessLink, linkObj);
+          dataAcessLink.full_link = linkObj.full_link;
+          dataAcessLink.short_link = linkObj.short_link;
 
-          if (resData) {
-              return helpers.sendResponse(res, resData);
-          }
+          return helpers.sendResponseSuccess(res, dataAcessLink);
+        }
+      } else {
+        const genShortLink = generateShortLink();
+        const shortLink = helpers.getHost() + genShortLink;
+        const fullLink = link.trim();
+        return linkRepo.addLink(shortLink, fullLink);
+      }
+    })
+    .then(async storedLink => {
+      if (storedLink) {
+        //   AcessLink.insert({ link_id: storedLink.id }, function(err, doc) {
+        //     if (err) {
+        //     }
+        //   });
+        // let accessLink = await AcessLinkModel.update(
+        //   { link_id: storedLink.id },
+        //   { link_id: storedLink.id },
+        //   { upsert: true }
+        // );
+        await accessLinkController.updateorCreate(storedLink._id);
+        let dataAcessLink = await AcessLinkModel.findOne({
+          link_id: storedLink._id
+        });
+        if (dataAcessLink) {
+          dataAcessLink = JSON.parse(JSON.stringify(dataAcessLink));
+          dataAcessLink.fullLink = storedLink.fullLink;
+          dataAcessLink.shortLink = storedLink.shortLink;
 
-          return helpers.sendResponse(res, constants.response.error);
+          return helpers.sendResponseSuccess(res, dataAcessLink);
+        }
+      }
 
-      }).catch((err) => {
-            resData = JSON.parse(JSON.stringify(constants.response.error));
-            resData.message = err.toString();
-            return helpers.sendResponse(res, resData);
-      });
-  }
+      return helpers.sendResponseError(res, "");
+    })
+    .catch(err => {
+      console.log("generateShortLink err", err);
+      return helpers.sendResponse(res, err.toString());
+    });
+  // }
+  //  try {
+  //     link = link?link.trim():''
+  //     if(link){
+  //         let dataLink = await LinkModel.findOne({link});
+  //         if(dataLink){
+  //            await accessLinkController.updateorCreate(storedLink.id);
 
+  //         }
+  //         else{
+  //             let newDataLink = await linkRepo.addLink(shortLink, fullLink);
+  //             if(newDataLink){
 
+  //             }
+  //         }
+  //     }
+
+  //  } catch (error) {
+
+  //  }
 };
 
 function generateShortLink() {
-    const now = Date.now();
-    let result = helpers.base_encode(now);
-    const maxLength = helpers.getMaxShortLen();
-    if (result.length > maxLength) {
-        result = result.substring(0, maxLength)
-    }
-    return result;
+  const now = Date.now();
+  let result = helpers.base_encode(now);
+  const maxLength = helpers.getMaxShortLen();
+  if (result.length > maxLength) {
+    result = result.substring(0, maxLength);
+  }
+  return result;
 }
