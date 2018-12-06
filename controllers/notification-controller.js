@@ -6,16 +6,20 @@ const webpush = require("web-push");
 
 const vapidKeys = webpush.generateVAPIDKeys();
 
-const publicVapidKey =
-  "BCd-NNalv04tT2HKYxWcv4nqEd2jUeW173il04IjQXRu_H6XTQ_7tz9ovPDfAandOeVHj6hyeZqqQBSooqtlJoo";
-const privateVapidKey = "HqOgaDcK79ljBAXMgG2v-K5kuE57zV9AoKWohjYu9iM";
+// const publicVapidKey =
+//   "BCd-NNalv04tT2HKYxWcv4nqEd2jUeW173il04IjQXRu_H6XTQ_7tz9ovPDfAandOeVHj6hyeZqqQBSooqtlJoo";
+// const privateVapidKey = "HqOgaDcK79ljBAXMgG2v-K5kuE57zV9AoKWohjYu9iM";
 
-console.log("publicVapidKey", publicVapidKey, privateVapidKey);
+console.log(
+  "publicVapidKey",
+  constants.publicVapidKey,
+  constants.privateVapidKey
+);
 // Replace with your email
 webpush.setVapidDetails(
   "mailto:trinhducbaolinh@gmail.com",
-  publicVapidKey,
-  privateVapidKey
+  constants.publicVapidKey,
+  constants.privateVapidKey
 );
 
 exports.subscribe = async (req, res) => {
